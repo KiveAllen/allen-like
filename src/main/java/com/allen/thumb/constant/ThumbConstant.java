@@ -1,7 +1,7 @@
 package com.allen.thumb.constant;
 
 /**
- * @author pine
+ * @author allen
  */
 public interface ThumbConstant {
 

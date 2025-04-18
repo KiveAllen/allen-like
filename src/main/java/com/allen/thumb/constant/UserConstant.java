@@ -1,8 +1,8 @@
 package com.allen.thumb.constant;
 
 /**
- * @author pine
+ * @author allen
  */
 public interface UserConstant {
-    public static final String LOGIN_USER = "login_user";
+    String LOGIN_USER = "login_user";
 }
