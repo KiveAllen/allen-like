@@ -3,7 +3,7 @@ package com.allen.thumb.common;
 /**
  * 返回工具类
  *
- * @author allen
+ * @author KiveAllen
  */
 public class ResultUtils {
 

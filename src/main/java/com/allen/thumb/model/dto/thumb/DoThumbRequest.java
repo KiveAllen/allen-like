@@ -5,7 +5,7 @@ import lombok.Data;
 /**
  * 点赞请求
  *
- * @author allen
+ * @author KiveAllen
  */
 @Data
 public class DoThumbRequest {

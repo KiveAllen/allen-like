@@ -4,7 +4,7 @@ package com.allen.thumb.util;
 import com.allen.thumb.constant.ThumbConstant;
 
 /**
- * @author allen
+ * @author KiveAllen
  */
 public class RedisKeyUtil {
 

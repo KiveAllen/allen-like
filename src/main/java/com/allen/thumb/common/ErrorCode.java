@@ -5,7 +5,7 @@ import lombok.Getter;
 /**
  * 错误码
  *
- * @author allen
+ * @author KiveAllen
  */
 @Getter
 public enum ErrorCode {

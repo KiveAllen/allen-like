@@ -5,7 +5,7 @@ import lombok.Getter;
 /**
  * lua 脚本执行结果类型
  *
- * @author allen
+ * @author KiveAllen
  */
 @Getter
 public enum LuaStatusEnum {
