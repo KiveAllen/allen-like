@@ -39,7 +39,7 @@ public class SyncThumb2DBJob {
     /**
      * 定时任务，每10秒执行一次
      */
-    @Scheduled(initialDelay = 10000, fixedDelay = 10000)
+    @Scheduled(fixedRate = 10000)
     public void run() {
         log.info("开始执行");
         DateTime nowDate = DateUtil.date();
