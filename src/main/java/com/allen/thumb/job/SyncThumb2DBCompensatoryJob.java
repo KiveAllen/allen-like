@@ -26,19 +26,22 @@ public class SyncThumb2DBCompensatoryJob {
     @Resource
     private SyncThumb2DBJob syncThumb2DBJob;
 
+    /**
+     * 定时任务，用于补偿 Redis 中的临时点赞数据到数据库
+     * 该任务每天凌晨2点执行
+     */
     @Scheduled(cron = "0 0 2 * * *")
     public void run() {
         log.info("开始补偿数据");
+        // 获取所有临时点赞数据的键
         Set<String> thumbKeys = redisTemplate.keys(RedisKeyUtil.getTempThumbKey("") + "*");
-//        Set<String> unThumbKeys = redisTemplate.keys(RedisKeyUtilunThumbKeys.getTempUnThumbKey("") + "*");
         Set<String> needHandleDataSet = new HashSet<>();
         if (thumbKeys != null) {
+            // 过滤非空键，并提取日期部分作为需要处理的数据集合
             thumbKeys.stream().filter(ObjUtil::isNotNull).forEach(thumbKey ->
                     needHandleDataSet.add(thumbKey.replace(ThumbConstant.TEMP_THUMB_KEY_PREFIX.formatted(""), "")));
         }
-//        unThumbKeys.stream().filter(ObjUtil::isNotNull).forEach(thumbKey ->
-//                needHandleDataSet.add(thumbKey.replace(ThumbConstant.TEMP_UN_THUMB_KEY_PREFIX.formatted(""), "")));
-
+        // 如果没有需要补偿的临时数据，则记录日志并退出
         if (CollUtil.isEmpty(needHandleDataSet)) {
             log.info("没有需要补偿的临时数据");
             return;

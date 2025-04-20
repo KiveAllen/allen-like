@@ -36,6 +36,9 @@ public class SyncThumb2DBJob {
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * 定时任务，每10秒执行一次
+     */
     @Scheduled(initialDelay = 10000, fixedDelay = 10000)
     public void run() {
         log.info("开始执行");
@@ -45,14 +48,18 @@ public class SyncThumb2DBJob {
         log.info("临时数据同步完成");
     }
 
+    /**
+     * 根据日期同步Redis中的临时点赞数据到数据库
+     * @param date 日期字符串，用于构建Redis中临时点赞数据的键
+     */
     public void syncThumb2DBByDate(String date) {
-        // 获取到临时点赞和取消点赞数据  
+        // 获取到临时点赞和取消点赞数据
         String tempThumbKey = RedisKeyUtil.getTempThumbKey(date);
         Map<Object, Object> allTempThumbMap = redisTemplate.opsForHash().entries(tempThumbKey);
         boolean thumbMapEmpty = CollUtil.isEmpty(allTempThumbMap);
 
-        // 同步 点赞 到数据库  
-        // 构建插入列表并收集blogId  
+        // 同步 点赞 到数据库
+        // 构建插入列表并收集blogId
         Map<Long, Long> blogThumbCountMap = new HashMap<>();
         if (thumbMapEmpty) {
             return;
@@ -65,7 +72,7 @@ public class SyncThumb2DBJob {
             String[] userIdAndBlogId = userIdBlogId.split(StrPool.COLON);
             Long userId = Long.valueOf(userIdAndBlogId[0]);
             Long blogId = Long.valueOf(userIdAndBlogId[1]);
-            // -1 取消点赞，1 点赞  
+            // -1 取消点赞，1 点赞
             Integer thumbType = Integer.valueOf(allTempThumbMap.get(userIdBlogId).toString());
             if (thumbType == ThumbTypeEnum.INCR.getValue()) {
                 Thumb thumb = new Thumb();
@@ -73,7 +80,7 @@ public class SyncThumb2DBJob {
                 thumb.setBlogId(blogId);
                 thumbList.add(thumb);
             } else if (thumbType == ThumbTypeEnum.DECR.getValue()) {
-                // 拼接查询条件，批量删除  
+                // 拼接查询条件，批量删除
                 needRemove = true;
                 wrapper.or().eq(Thumb::getUserId, userId).eq(Thumb::getBlogId, blogId);
             } else {
@@ -82,20 +89,20 @@ public class SyncThumb2DBJob {
                 }
                 continue;
             }
-            // 计算点赞增量  
+            // 计算点赞增量
             blogThumbCountMap.put(blogId, blogThumbCountMap.getOrDefault(blogId, 0L) + thumbType);
         }
-        // 批量插入  
+        // 批量插入
         thumbService.saveBatch(thumbList);
-        // 批量删除  
+        // 批量删除
         if (needRemove) {
             thumbService.remove(wrapper);
         }
-        // 批量更新博客点赞量  
+        // 批量更新博客点赞量
         if (!blogThumbCountMap.isEmpty()) {
             blogMapper.batchUpdateThumbCount(blogThumbCountMap);
         }
-        // 异步删除  
+        // 异步删除Redis中的临时点赞数据
         Thread.startVirtualThread(() -> redisTemplate.delete(tempThumbKey));
     }
 }

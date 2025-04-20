@@ -21,15 +21,16 @@ public class BlogController {
 
     @GetMapping("/get")
     public BaseResponse<BlogVO> get(long blogId, HttpServletRequest request) {
-        BlogVO blogVO = blogService.getBlogVOById(blogId, request);
-        return ResultUtils.success(blogVO);
+        return ResultUtils.messageHandleSuccess(() -> blogService.getBlogVOById(blogId, request));
     }
 
     @GetMapping("/list")
     public BaseResponse<List<BlogVO>> list(HttpServletRequest request) {
         List<Blog> blogList = blogService.list();
-        List<BlogVO> blogVOList = blogService.getBlogVOList(blogList, request);
-        return ResultUtils.success(blogVOList);
+        if (blogList == null) {
+            return ResultUtils.success(List.of());
+        }
+        return ResultUtils.messageHandleSuccess(() -> blogService.getBlogVOList(blogList, request));
     }
 
 }

@@ -21,17 +21,39 @@
         createTime,updateTime
     </sql>
 
+    <!-- 更新博客的点赞数
+         该更新语句批量更新多篇博客的点赞数
+         它根据countMap中的博客ID和对应的增加数量来更新数据库中的记录
+         例如:
+            Map<Long, Integer> countMap = new HashMap<>();
+            countMap.put(1L, 5); // 博客ID为1的点赞数增加5
+            countMap.put(2L, 3); // 博客ID为2的点赞数增加3
+            countMap.put(3L, 7); // 博客ID为3的点赞数增加7
+         SQL:
+            UPDATE blog
+            SET thumbCount = thumbCount + CASE id
+                WHEN 1 THEN 5
+                WHEN 2 THEN 3
+                WHEN 3 THEN 7
+            END
+            WHERE id IN (1, 2, 3);
+    -->
     <update id="batchUpdateThumbCount">
         UPDATE blog
         SET thumbCount = thumbCount + CASE id
+        <!-- 遍历countMap中的每一对键值对
+             key代表博客ID，value代表该博客需要增加的点赞数
+        -->
         <foreach collection="countMap.entrySet()" item="value" index="key">
             WHEN #{key} THEN #{value}
         </foreach>
         END
         WHERE id IN
+        <!-- 遍历countMap的键集，生成一个包含所有需要更新的博客ID的列表 -->
         <foreach collection="countMap.keySet()" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
     </update>
+
 
 </mapper>

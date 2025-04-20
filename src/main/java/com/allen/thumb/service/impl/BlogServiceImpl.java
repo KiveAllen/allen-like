@@ -83,7 +83,8 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog>
         return blogList.stream()
                 .map(blog -> {
                     BlogVO blogVO = BeanUtil.copyProperties(blog, BlogVO.class);
-                    blogVO.setHasThumb(blogIdHasThumbMap.get(blog.getId()));
+                    Boolean hasThumb = blogIdHasThumbMap.get(blog.getId());
+                    blogVO.setHasThumb(hasThumb != null && hasThumb);
                     return blogVO;
                 })
                 .toList();
