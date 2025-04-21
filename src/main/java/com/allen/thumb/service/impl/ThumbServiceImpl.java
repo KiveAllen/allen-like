@@ -1,6 +1,7 @@
 package com.allen.thumb.service.impl;
 
 import com.allen.thumb.constant.ThumbConstant;
+import com.allen.thumb.manager.cache.CacheManager;
 import com.allen.thumb.mapper.ThumbMapper;
 import com.allen.thumb.model.dto.thumb.DoThumbRequest;
 import com.allen.thumb.model.entity.Blog;
@@ -9,7 +10,6 @@ import com.allen.thumb.model.entity.User;
 import com.allen.thumb.service.BlogService;
 import com.allen.thumb.service.ThumbService;
 import com.allen.thumb.service.UserService;
-import com.allen.thumb.util.RedisKeyUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * @description 针对表【thumb】的数据库操作Service实现
  * @createDate 2025-04-18 14:59:02
  */
-@Service("thumbServiceDB")
+@Service("thumbService")
 @Slf4j
 @RequiredArgsConstructor
 public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements ThumbService {
@@ -35,6 +35,9 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
     private final TransactionTemplate transactionTemplate;
 
     private final RedisTemplate<String, Object> redisTemplate;
+
+    // 引入缓存管理
+    private final CacheManager cacheManager;
 
     @Override
     public Boolean doThumb(DoThumbRequest doThumbRequest, HttpServletRequest request) {
@@ -66,8 +69,13 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
 
                 // 点赞记录存入 Redis
                 if (success) {
-                    redisTemplate.opsForHash().put(ThumbConstant.USER_THUMB_KEY_PREFIX + loginUser.getId().toString(), blogId.toString(), thumb.getId());
+                    String hashKey = ThumbConstant.USER_THUMB_KEY_PREFIX + loginUser.getId();
+                    String fieldKey = blogId.toString();
+                    Long realThumbId = thumb.getId();
+                    redisTemplate.opsForHash().put(hashKey, fieldKey, realThumbId);
+                    cacheManager.putIfPresent(hashKey, fieldKey, realThumbId);
                 }
+
                 // 更新成功才执行
                 return success;
             });
@@ -86,32 +94,46 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements
             // 编程式事务
             return transactionTemplate.execute(status -> {
                 Long blogId = doThumbRequest.getBlogId();
-                Long thumbId = ((Long) redisTemplate.opsForHash().get(ThumbConstant.USER_THUMB_KEY_PREFIX + loginUser.getId().toString(), blogId.toString()));
-                if (thumbId == null) {
+                Object thumbIdObj = cacheManager.get(ThumbConstant.USER_THUMB_KEY_PREFIX + loginUser.getId(), blogId.toString());
+                if (thumbIdObj == null || thumbIdObj.equals(ThumbConstant.UN_THUMB_CONSTANT)) {
                     throw new RuntimeException("用户未点赞");
                 }
+
 
                 boolean update = blogService.lambdaUpdate()
                         .eq(Blog::getId, blogId)
                         .setSql("thumbCount = thumbCount - 1")
                         .update();
 
-                boolean success = update && this.removeById(thumbId);
+                boolean success = update && this.removeById((Long) thumbIdObj);
 
                 // 点赞记录从 Redis 删除
                 if (success) {
-                    redisTemplate.opsForHash().delete(ThumbConstant.USER_THUMB_KEY_PREFIX + loginUser.getId(), blogId.toString());
+                    String hashKey = ThumbConstant.USER_THUMB_KEY_PREFIX + loginUser.getId();
+                    String fieldKey = blogId.toString();
+                    redisTemplate.opsForHash().delete(hashKey, fieldKey);
+                    cacheManager.putIfPresent(hashKey, fieldKey, ThumbConstant.UN_THUMB_CONSTANT);
                 }
+
                 return success;
 
             });
         }
     }
 
+//    @Override
+//    public Boolean hasThumb(Long blogId, Long userId) {
+//        return redisTemplate.opsForHash().hasKey(RedisKeyUtil.getUserThumbKey(userId), blogId.toString());
+//    }
 
     @Override
     public Boolean hasThumb(Long blogId, Long userId) {
-        return redisTemplate.opsForHash().hasKey(RedisKeyUtil.getUserThumbKey(userId), blogId.toString());
+        Object thumbIdObj = cacheManager.get(ThumbConstant.USER_THUMB_KEY_PREFIX + userId, blogId.toString());
+        if (thumbIdObj == null) {
+            return false;
+        }
+        Long thumbId = (Long) thumbIdObj;
+        return !thumbId.equals(ThumbConstant.UN_THUMB_CONSTANT);
     }
 
 
