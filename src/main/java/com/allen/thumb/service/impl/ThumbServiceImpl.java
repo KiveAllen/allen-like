@@ -23,9 +23,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * @description 针对表【thumb】的数据库操作Service实现
  * @createDate 2025-04-18 14:59:02
  */
-@Service("thumbService")
 @Slf4j
 @RequiredArgsConstructor
+@Service("thumbServiceLocalCache")
 public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb> implements ThumbService {
 
     private final UserService userService;
