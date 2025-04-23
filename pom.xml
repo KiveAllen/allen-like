@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.allen</groupId>
-    <artifactId>thumb</artifactId>
+    <artifactId>allen-like</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>allen-like</name>
     <description>allen-like</description>
